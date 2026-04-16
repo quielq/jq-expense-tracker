@@ -1,4 +1,4 @@
-A lightweight, single-file web app for tracking shared expenses between two people. No app store, no subscription — just a live URL you both open on your phone or laptop.
+A lightweight, single-file web app for tracking shared expenses between two people.
 Built with vanilla HTML/CSS/JS and Supabase as the backend database.
 
 ✨ Features
