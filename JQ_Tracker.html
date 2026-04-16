@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jill & Quiel Shared Expenses</title>
+
+    <!-- ============================================================
+         SETUP: Replace the two lines below with your Supabase credentials.
+         Find them in: Supabase Dashboard → Your Project → Settings → API
+         ============================================================ -->
+    <script>
+        const SUPABASE_URL = 'https://sjdzwxzytaazoglqhvnp.supabase.co';       // e.g. https://abcdefgh.supabase.co
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNqZHp3eHp5dGFhem9nbHFodm5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyOTIwMjEsImV4cCI6MjA5MTg2ODAyMX0.RTdRVU32GzY6WQJNbKdH5Y-AwO5J5M71SgRBGkQ6mIE'; // long string starting with "eyJ..."
+    </script>
+    <!-- ============================================================ -->
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Connection banner */
+        #conn-banner {
+            text-align: center;
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 18px;
+            font-size: 0.9em;
+            font-weight: 600;
+            display: none;
+        }
+
+        #conn-banner.ok {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        #conn-banner.err {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        #conn-banner.warn {
+            background: #fff3cd;
+            color: #856404;
+            display: block;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .input-row.full {
+            grid-template-columns: 1fr;
+        }
+
+        label {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #555;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-add {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-add:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-add:disabled {
+            background: #aaa;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .btn-clear {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-clear:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+            padding: 6px 10px;
+            font-size: 0.8em;
+            flex: none;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-settle {
+            background: #28a745;
+            color: white;
+            padding: 10px 18px;
+            font-size: 0.9em;
+            flex: none;
+            border-radius: 6px;
+        }
+
+        .btn-settle:hover {
+            background: #218838;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            text-align: center;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+
+        .expenses-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .expense-item.settled-item {
+            border-left-color: #28a745;
+            opacity: 0.6;
+        }
+
+        .expense-details {
+            flex: 1;
+        }
+
+        .expense-description {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .expense-meta {
+            font-size: 0.8em;
+            color: #888;
+        }
+
+        .expense-amount {
+            text-align: right;
+            font-weight: 700;
+            color: #667eea;
+            min-width: 100px;
+        }
+
+        .summary-section h3 {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #666;
+        }
+
+        .summary-value {
+            font-weight: 700;
+            color: #333;
+        }
+
+        .settlement {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .settlement.balanced {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .settlement strong {
+            color: #856404;
+        }
+
+        .settlement.balanced strong {
+            color: #155724;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-button {
+            padding: 10px 15px;
+            background: none;
+            border: none;
+            font-weight: 600;
+            color: #999;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-size: 0.95em;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ccc;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Settle up modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal h3 {
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .modal p {
+            color: #555;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-cancel {
+            background: #f0f0f0;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <header>
+            <h1>💰 Shared Expenses</h1>
+            <p>Jill &amp; Quiel</p>
+        </header>
+
+        <div id="conn-banner"></div>
+
+        <div class="main-grid">
+            <!-- Add Expense -->
+            <div class="card">
+                <h2>➕ Add Expense</h2>
+                <div class="input-group">
+                    <div class="input-row">
+                        <div>
+                            <label for="paidBy">Who paid?</label>
+                            <select id="paidBy">
+                                <option value="">Select person</option>
+                                <option value="Jill">Jill</option>
+                                <option value="Quiel">Quiel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="amount">Amount (₱)</label>
+                            <input type="number" id="amount" placeholder="0.00" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="input-row full">
+                        <div>
+                            <label for="category">Category</label>
+                            <select id="category">
+                                <option value="">Select category</option>
+                                <option value="Dine Out">🍽️ Dine Out</option>
+                                <option value="Grab">🚗 Grab</option>
+                                <option value="Fitness">💪 Fitness</option>
+                                <option value="Groceries">🛒 Groceries</option>
+                                <option value="Travel">✈️ Travel</option>
+                                <option value="Entertainment">🎬 Entertainment</option>
+                                <option value="Other">📌 Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row full">
+                        <div>
+                            <label for="description">Description</label>
+                            <input type="text" id="description" placeholder="e.g., Dinner at BGC, Grab ride">
+                        </div>
+                    </div>
+                    <div class="input-row full">
+                        <div>
+                            <label for="splitType">Who is this for?</label>
+                            <select id="splitType">
+                                <option value="shared">Shared (50/50 split)</option>
+                                <option value="jill">Only Jill</option>
+                                <option value="quiel">Only Quiel</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row full">
+                        <div>
+                            <label for="date">Date</label>
+                            <input type="date" id="date">
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-add" id="addBtn" onclick="addExpense()">Add Expense</button>
+                        <button class="btn-clear" onclick="clearForm()">Clear</button>
+                    </div>
+                    <div id="status" class="status"></div>
+                </div>
+            </div>
+
+            <!-- Monthly Summary -->
+            <div class="card">
+                <h2>📊 Monthly Summary</h2>
+                <div id="monthlySummary" class="loading"><span class="spinner"></span>Loading…</div>
+            </div>
+        </div>
+
+        <!-- Expenses list + Category breakdown -->
+        <div class="main-grid">
+            <div class="card">
+                <h2>📝 Recent Expenses</h2>
+                <div class="tabs">
+                    <button class="tab-button active" id="tab-all" onclick="switchTab('all',   this)">All</button>
+                    <button class="tab-button" id="tab-jill" onclick="switchTab('jill',  this)">Jill's</button>
+                    <button class="tab-button" id="tab-quiel" onclick="switchTab('quiel', this)">Quiel's</button>
+                </div>
+                <div id="expensesList" class="expenses-list loading"><span class="spinner"></span>Loading…</div>
+            </div>
+
+            <div class="card">
+                <h2>💳 Category Breakdown</h2>
+                <div id="categoryBreakdown" class="loading"><span class="spinner"></span>Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settle-up confirmation modal -->
+    <div class="modal-overlay" id="settleModal">
+        <div class="modal">
+            <h3>✅ Mark as Settled</h3>
+            <p id="settleText">This will record a settlement entry so your balance resets to zero. The previous expenses
+                will stay in history.</p>
+            <div class="modal-buttons">
+                <button class="btn-settle" onclick="confirmSettle()">Yes, Settle Up</button>
+                <button class="btn-cancel" onclick="closeSettleModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Supabase init ────────────────────────────────────────────────────────────
+        const { createClient } = supabase;
+        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let allExpenses = [];
+        let currentTab = 'all';
+        let settleAmount = 0;
+        let settleOwer = '';
+
+        // ── Boot ─────────────────────────────────────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('date').value = today();
+            await checkConnection();
+            await loadExpenses();
+        });
+
+        function today() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        // ── Connection check ──────────────────────────────────────────────────────────
+        async function checkConnection() {
+            const banner = document.getElementById('conn-banner');
+
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                banner.className = 'warn';
+                banner.textContent = '⚠️ Supabase not configured yet — running in demo mode (data won\'t save). See setup instructions.';
+                return;
+            }
+
+            try {
+                const { error } = await db.from('expenses').select('id').limit(1);
+                if (error) throw error;
+                banner.className = 'ok';
+                banner.textContent = '🟢 Connected to database';
+                setTimeout(() => banner.style.display = 'none', 3000);
+            } catch (e) {
+                banner.className = 'err';
+                banner.textContent = '🔴 Database error: ' + e.message;
+            }
+        }
+
+        // ── Load ──────────────────────────────────────────────────────────────────────
+        async function loadExpenses() {
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                allExpenses = getSampleData();
+                renderAll();
+                return;
+            }
+
+            try {
+                const { data, error } = await db
+                    .from('expenses')
+                    .select('*')
+                    .order('date', { ascending: false });
+
+                if (error) throw error;
+                allExpenses = data || [];
+            } catch (e) {
+                showStatus('Failed to load: ' + e.message, 'error');
+                allExpenses = [];
+            }
+            renderAll();
+        }
+
+        // ── Add ───────────────────────────────────────────────────────────────────────
+        async function addExpense() {
+            const paidBy = document.getElementById('paidBy').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const category = document.getElementById('category').value;
+            const description = document.getElementById('description').value.trim();
+            const date = document.getElementById('date').value;
+            const splitType = document.getElementById('splitType').value;
+
+            if (!paidBy || !amount || !category || !description || !date || !splitType) {
+                return showStatus('⚠️ Fill in all fields', 'error');
+            }
+            if (amount <= 0) return showStatus('⚠️ Amount must be greater than 0', 'error');
+
+            const btn = document.getElementById('addBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Saving…';
+
+            const record = { paid_by: paidBy, amount, category, description, date, split_type: splitType };
+
+            if (SUPABASE_URL === 'YOUR_SUPABASE_URL') {
+                // Demo mode — store in memory only
+                allExpenses.unshift({ ...record, id: Date.now(), created_at: new Date().toISOString() });
+                renderAll();
+                showStatus('✅ Added (demo mode — not saved to DB)', 'success');
+                clearForm();
+                btn.disabled = false; btn.textContent = 'Add Expense';
+                return;
+            }
+
+            try {
+                const { data, error } = await db.from('expenses').insert([record]).select().single();
+                if (error) throw error;
+                allExpenses.unshift(data);
+                renderAll();
+                showStatus('✅ Expense added!', 'success');
+                clearForm();
+            } catch (e) {
+                showStatus('❌ Error: ' + e.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Add Expense';
+        }
+
+        // ── Delete ────────────────────────────────────────────────────────────────────
+        async function deleteExpense(id) {
+            if (!confirm('Delete this expense?')) return;
+
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+                const { error } = await db.from('expenses').delete().eq('id', id);
+                if (error) return alert('Delete failed: ' + error.message);
+            }
+
+            allExpenses = allExpenses.filter(e => e.id !== id);
+            renderAll();
+        }
+
+        // ── Settle up ─────────────────────────────────────────────────────────────────
+        function openSettleModal(ower, amount) {
+            settleOwer = ower;
+            settleAmount = amount;
+            const other = ower === 'Jill' ? 'Quiel' : 'Jill';
+            document.getElementById('settleText').textContent =
+                `${ower} will pay ${other} ₱${amount.toFixed(2)}. This records the settlement and resets the current balance.`;
+            document.getElementById('settleModal').classList.add('open');
+        }
+
+        function closeSettleModal() {
+            document.getElementById('settleModal').classList.remove('open');
+        }
+
+        async function confirmSettle() {
+            closeSettleModal();
+            const record = {
+                paid_by: settleOwer,
+                amount: settleAmount,
+                category: 'Settlement',
+                description: `💸 Settlement — ${settleOwer} paid back balance`,
+                date: today(),
+                split_type: settleOwer === 'Jill' ? 'quiel' : 'jill'  // cancels out the debt
+            };
+
+            if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+                const { data, error } = await db.from('expenses').insert([record]).select().single();
+                if (error) return alert('Settlement failed: ' + error.message);
+                allExpenses.unshift(data);
+            } else {
+                allExpenses.unshift({ ...record, id: Date.now(), created_at: new Date().toISOString() });
+            }
+            renderAll();
+            showStatus('✅ Settlement recorded!', 'success');
+        }
+
+        // ── Render helpers ────────────────────────────────────────────────────────────
+        function renderAll() {
+            renderMonthlySummary();
+            renderExpensesList();
+            renderCategoryBreakdown();
+        }
+
+        function getMonthKey(d) { return d.substring(0, 7); }
+
+        function renderMonthlySummary() {
+            const currentMonth = getMonthKey(today());
+            const monthExpenses = allExpenses.filter(e => getMonthKey(e.date) === currentMonth);
+
+            let jillOwes = 0; // positive = Jill owes Quiel
+            let quielOwes = 0; // positive = Quiel owes Jill
+
+            monthExpenses.forEach(e => {
+                if (e.split_type === 'shared') {
+                    const half = e.amount / 2;
+                    if (e.paid_by === 'Jill') quielOwes += half;
+                    else jillOwes += half;
+                } else if (e.split_type === 'jill') {
+                    if (e.paid_by === 'Quiel') jillOwes += e.amount;
+                } else if (e.split_type === 'quiel') {
+                    if (e.paid_by === 'Jill') quielOwes += e.amount;
+                }
+            });
+
+            const net = quielOwes - jillOwes; // positive = Quiel owes Jill, negative = Jill owes Quiel
+            const total = monthExpenses.reduce((s, e) => s + e.amount, 0);
+            const jillPaid = monthExpenses.filter(e => e.paid_by === 'Jill').reduce((s, e) => s + e.amount, 0);
+            const quielPaid = monthExpenses.filter(e => e.paid_by === 'Quiel').reduce((s, e) => s + e.amount, 0);
+
+            let settlementHtml = '';
+            if (Math.abs(net) > 0.01) {
+                const ower = net > 0 ? 'Quiel' : 'Jill';
+                const owee = net > 0 ? 'Jill' : 'Quiel';
+                const owedAmt = Math.abs(net).toFixed(2);
+                settlementHtml = `
+            <div class="settlement">
+                <strong>👉 ${ower} owes ${owee}: ₱${owedAmt}</strong><br>
+                <div style="margin-top:10px;">
+                    <button class="btn-settle" onclick="openSettleModal('${ower}', ${Math.abs(net)})">
+                        💸 Settle Up
+                    </button>
+                </div>
+            </div>`;
+            } else if (total > 0) {
+                settlementHtml = `<div class="settlement balanced"><strong>✅ All settled this month!</strong></div>`;
+            } else {
+                settlementHtml = `<div class="settlement"><strong>No expenses this month yet.</strong></div>`;
+            }
+
+            document.getElementById('monthlySummary').innerHTML = `
+        <div class="summary-section">
+            <div class="summary-item">
+                <span class="summary-label">Total Expenses</span>
+                <span class="summary-value">₱${total.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Jill paid</span>
+                <span class="summary-value">₱${jillPaid.toFixed(2)}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Quiel paid</span>
+                <span class="summary-value">₱${quielPaid.toFixed(2)}</span>
+            </div>
+        </div>
+        ${settlementHtml}
+    `;
+        }
+
+        function switchTab(tab, el) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            renderExpensesList();
+        }
+
+        function splitLabel(type) {
+            return { shared: '(Shared)', jill: '(Jill only)', quiel: '(Quiel only)', Settlement: '(Settlement)' }[type] || '';
+        }
+
+        function renderExpensesList() {
+            let list = [...allExpenses];
+            if (currentTab === 'jill') list = list.filter(e => e.paid_by === 'Jill');
+            if (currentTab === 'quiel') list = list.filter(e => e.paid_by === 'Quiel');
+            list.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (!list.length) {
+                document.getElementById('expensesList').innerHTML = '<div class="loading">No expenses yet</div>';
+                return;
+            }
+
+            document.getElementById('expensesList').innerHTML = list.map(e => `
+        <div class="expense-item ${e.category === 'Settlement' ? 'settled-item' : ''}">
+            <div class="expense-details">
+                <div class="expense-description">${e.description}</div>
+                <div class="expense-meta">${e.paid_by} · ${e.category} · ${new Date(e.date + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} ${splitLabel(e.split_type)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div class="expense-amount">₱${Number(e.amount).toFixed(2)}</div>
+                ${e.category !== 'Settlement' ? `<button class="btn-danger" onclick="deleteExpense(${e.id})">✕</button>` : ''}
+            </div>
+        </div>`).join('');
+        }
+
+        function renderCategoryBreakdown() {
+            const currentMonth = getMonthKey(today());
+            const monthExp = allExpenses.filter(e => getMonthKey(e.date) === currentMonth && e.category !== 'Settlement');
+
+            const breakdown = {};
+            monthExp.forEach(e => breakdown[e.category] = (breakdown[e.category] || 0) + e.amount);
+            const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+
+            if (!sorted.length) {
+                document.getElementById('categoryBreakdown').innerHTML = '<div class="loading">No expenses this month</div>';
+                return;
+            }
+
+            const total = sorted.reduce((s, [, v]) => s + v, 0);
+            document.getElementById('categoryBreakdown').innerHTML = `
+        <div class="summary-section">
+            ${sorted.map(([cat, amt]) => {
+                const pct = ((amt / total) * 100).toFixed(1);
+                return `<div class="summary-item">
+                    <span class="summary-label">${cat}</span>
+                    <span class="summary-value">₱${amt.toFixed(2)} <small style="color:#aaa">${pct}%</small></span>
+                </div>`;
+            }).join('')}
+        </div>`;
+        }
+
+        // ── UI helpers ────────────────────────────────────────────────────────────────
+        function showStatus(msg, type) {
+            const el = document.getElementById('status');
+            el.textContent = msg;
+            el.className = 'status ' + type;
+            if (type === 'success') setTimeout(() => el.className = 'status', 3000);
+        }
+
+        function clearForm() {
+            ['paidBy', 'category', 'splitType'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('date').value = today();
+        }
+
+        // ── Sample data for demo mode ─────────────────────────────────────────────────
+        function getSampleData() {
+            const m = today().substring(0, 7);
+            return [
+                { id: 1, paid_by: 'Jill', amount: 850, category: 'Dine Out', description: 'Dinner at Sarsa BGC', date: `${m}-12`, split_type: 'shared', created_at: '' },
+                { id: 2, paid_by: 'Quiel', amount: 320, category: 'Grab', description: 'Grab to the mall', date: `${m}-11`, split_type: 'shared', created_at: '' },
+                { id: 3, paid_by: 'Jill', amount: 1200, category: 'Groceries', description: 'SM Supermarket', date: `${m}-10`, split_type: 'shared', created_at: '' },
+                { id: 4, paid_by: 'Quiel', amount: 500, category: 'Fitness', description: 'Badminton court', date: `${m}-08`, split_type: 'quiel', created_at: '' },
+                { id: 5, paid_by: 'Jill', amount: 450, category: 'Entertainment', description: 'Netflix subscription', date: `${m}-01`, split_type: 'jill', created_at: '' },
+            ];
+        }
+    </script>
+</body>
+
+</html>
